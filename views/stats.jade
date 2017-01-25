@@ -9,7 +9,7 @@ block body-content
                 var name = component;
                 var el = $('<li>').text('Hub - ' + name).append($('<span>').attr('id', 'stats-uptime-' + name));
                 list.append(el);
-                $("#stats-uptime-" + component).html(components[component] + "m" + " (" + Math.floor(components[component]/(24*60) +" days)"); 
+                $("#stats-uptime-" + component).html(components[component] + "m" + " (" + Math.floor(components[component]/(24*60)) +" days)"); 
             }
         });
 
@@ -20,7 +20,7 @@ block body-content
                 var name = component;                
                 var el = $('<li>').text('Hub - ' + name).append($('<span>').attr('id', 'stats-uptimerecord-' + name));
                 list.append(el);
-                $("#stats-uptimerecord-" + component).html(components[component] + "m" + " (" + Math.floor(components[component]/(24*60) +" days)"); 
+                $("#stats-uptimerecord-" + component).html(components[component] + "m" + " (" + Math.floor(components[component]/(24*60)) +" days)"); 
             }
         });
     div#content

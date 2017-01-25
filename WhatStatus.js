@@ -59,7 +59,8 @@ for (var name in hubs) {
     var port = hubs[name].port;
     var bot = new nmdc.Nmdc({
         address: ip,
-        port: port
+        port: port,
+        auto_reconnect: true
     }, function () {
         hubBots[name] = bot;
     });
@@ -162,22 +163,6 @@ app.get('/api/2/uptime/tracker', function (req, res) {
         res.json(jsonArray);
     });
 });
-// Check all components every minute
-var site_status_counter = 0;
-var tracker_status_counter = 0;
-var irc_status_counter = 0;
-// Check Site Components (Cronjob running every minute)
-new cronJob('* 1 * * * * *', function () {
-    console.log('Checking status of hubs');
-    updateStatus();
-}, null, true);
-/*
-Statistics (minute)
-
-This cronjob is incrementing the uptime counters for the various monitored components
-and updating the uptime records if the current uptime > the old record.
-*/
-// Initialize Redis Keys to prevent "null" values
 function initializeRedis(component) {
     db.exists(component, function (err, reply) {
         if (reply != 1) {
@@ -188,13 +173,23 @@ function initializeRedis(component) {
 for (var name_1 in hubs) {
     initializeRedis(name_1 + "-status");
     db.set("uptime:" + name_1, 0);
-    db.set("uptime-record:" + name_1, 0);
 }
-new cronJob('* 1 * * * *', function () {
+// Check Site Components (Cronjob running every minute)
+new cronJob('*/1 * * * *', function () {
+    console.log('Checking status of hubs');
+    updateStatus();
+}, null, true, null, null, true);
+/*
+Statistics (minute)
+
+This cronjob is incrementing the uptime counters for the various monitored components
+and updating the uptime records if the current uptime > the old record.
+*/
+// Initialize Redis Keys to prevent "null" values
+new cronJob('*/1 * * * *', function () {
     console.log("[Stats] Cronjob started");
     updateUptime();
-    updateRecords();
-}, null, true);
+}, null, true, null, null, true);
 http.createServer(app).listen(app.get('port'), function () {
     console.log("WhatStatus server listening on port: " + app.get('port'));
 });
@@ -214,6 +209,13 @@ function updateUptime() {
         db.get(name_2 + "-status", function (err, stat) {
             if (stat != 0) {
                 db.incr("uptime:" + name_2);
+                db.get("uptime:" + name_2, function (err, stat) {
+                    db.get("uptime-record:" + name_2, function (err, record) {
+                        if (record < stat) {
+                            db.set("uptime-record:" + name_2, stat);
+                        }
+                    });
+                });
             }
         });
     };
@@ -226,7 +228,7 @@ function updateRecords() {
         db.get("uptime:" + name_3, function (err, stat) {
             db.get("uptime-record:" + name_3, function (err, record) {
                 if (record < stat) {
-                    db.set("uptime:" + name_3, stat);
+                    db.set("uptime-record:" + name_3, stat);
                 }
             });
         });
