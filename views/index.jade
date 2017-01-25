@@ -3,7 +3,23 @@ extends layout
 block body-content
     script(type='text/javascript').
         $.getJSON("/api/status", function(components) {
+            $('table.service-table').empty();
+                var body = $('<tbody>');
+                $('table.service-table').append(body);
             for (var component in components) {
+                var name = component;
+
+                
+                var row = $('<tr>')
+                body.append(row);
+                var img = $('<img>').attr('id', 'status-' + name + '-icon');
+                var ico = $('<td>').addClass('icon').append(img);
+                row.append(ico);
+                var hubName = $('<td>').addClass('service').text(name);
+                row.append(hubName);
+                var stat = $('<td>').attr('id', 'status-' + name)
+                row.append(stat);
+
                 if(components[component] == 1) {
                     $("#status-" + component).html("Up");
                     $("#status-" + component).css("color", "#089a00");
@@ -24,27 +40,23 @@ block body-content
             img(src='#{logo_url}')
         div.status-dashboard
             table.service-table
-                tr
-                    td.icon
-                        img(src, id='status-site-icon')
-                    td.service Site - what.cd
-                    td#status-site
-                tr
-                    td.icon
-                        img(src, id='status-tracker-icon')
-                    td.service Tracker - tracker.what.cd
-                    td#status-tracker
-                tr
-                    td.icon
-                        img(src, id='status-irc-icon')
-                    td.service IRC - irc.what-network.net
-                    td#status-irc
+                //- tr
+                //-     td.icon
+                //-         img(src, id='status-site-icon')
+                //-     td.service Site - what.cd
+                //-     td#status-site
+                //- tr
+                //-     td.icon
+                //-         img(src, id='status-tracker-icon')
+                //-     td.service Tracker - tracker.what.cd
+                //-     td#status-tracker
+                //- tr
+                //-     td.icon
+                //-         img(src, id='status-irc-icon')
+                //-     td.service IRC - irc.what-network.net
+                //-     td#status-irc
         div.disclaimer
             p This site is unofficial and is not affiliated with What.CD.
-        div.twitter
-            a.twitter-timeline(href='https://twitter.com/search?q=from%3Awhatcdstatus+OR+from%3Awhatcd+include%3Aretweets', data-widget-id='419095395902316544') Tweets by @whatcd and @WhatcdStatus
-            script(type='text/javascript').
-                !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");
 
 
 

@@ -1,0 +1,6 @@
+Install node
+Install typescript
+Install redis
+Run redis-server.exe
+open cmd, type "npm install"
+open cmd, then "tsc WhatStatus.ts" , then "node WhatStatus.js"
