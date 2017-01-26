@@ -11,9 +11,9 @@
         "nick": "pinger2",
         "pass": ""
     },
-    "dezire3": {
-        "ip": "127.0.0.1",
-        "port": 411,
+    "dezireN": {
+        "ip": "127.0.1.1",
+        "port": 412,
         "nick": "pinger3",
         "pass": ""
     }

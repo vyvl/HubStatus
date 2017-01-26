@@ -54,7 +54,7 @@ var db = redis.createClient();
 //TODO: remove sync call
 var hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
 var hubBots = {};
-var _loop_1 = function (name_1) {
+for (var name_1 in hubs) {
     var ip = hubs[name_1].ip;
     var port = hubs[name_1].port;
     var bot = new nmdc.Nmdc({
@@ -63,12 +63,8 @@ var _loop_1 = function (name_1) {
         auto_reconnect: true,
         nick: hubs[name_1].nick,
         password: hubs[name_1].pass
-    }, function () {
-        hubBots[name_1] = bot;
     });
-};
-for (var name_1 in hubs) {
-    _loop_1(name_1);
+    hubBots[name_1] = bot;
 }
 // Catch connection errors if redis-server isn't running
 db.on("error", function (err) {
@@ -160,15 +156,19 @@ app.get('/api/2/uptime/tracker', function (req, res) {
     });
 });
 function initializeRedis(component) {
-    db.exists(component, function (err, reply) {
-        if (reply != 1) {
-            db.set(component, 0);
-        }
-    });
+    db.set(component, 2);
 }
-for (var name_5 in hubs) {
+var _loop_1 = function (name_5) {
     initializeRedis(name_5 + "-status");
     db.set("uptime:" + name_5, 0);
+    db.exists("uptime-record:" + name_5, function (err, val) {
+        if (!val) {
+            db.set("uptime-record:" + name_5, 0);
+        }
+    });
+};
+for (var name_5 in hubs) {
+    _loop_1(name_5);
 }
 // Check Site Components (Cronjob running every minute)
 new cronJob('*/1 * * * *', function () {
@@ -193,6 +193,7 @@ function updateStatus() {
     for (var name_6 in hubBots) {
         var bot = hubBots[name_6];
         if (bot.getIsConnected()) {
+            console.log(bot.getHubName());
             db.set(name_6 + "-status", 1);
         }
         else {

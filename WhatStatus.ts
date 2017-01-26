@@ -30,10 +30,10 @@ for (let name in hubs) {
         auto_reconnect: true,
         nick: hubs[name].nick,
         password: hubs[name].pass
-    }, () => {
-        hubBots[name] = bot;
     });
+    hubBots[name] = bot;
 }
+
 // Catch connection errors if redis-server isn't running
 db.on("error", function (err) {
     console.log(err.toString());
@@ -138,16 +138,17 @@ app.get('/api/2/uptime/tracker', function (req, res) {
 })
 
 function initializeRedis(component) {
-    db.exists(component, function (err, reply) {
-        if (reply != 1) {
-            db.set(component, 0);
-        }
-    });
+    db.set(component, 2);
 }
 
 for (let name in hubs) {
     initializeRedis(`${name}-status`);
     db.set(`uptime:${name}`, 0);
+    db.exists(`uptime-record:${name}`, (err, val: boolean) => {
+        if (!val) {
+            db.set(`uptime-record:${name}`, 0);
+        }
+    })
 }
 
 // Check Site Components (Cronjob running every minute)
@@ -181,6 +182,7 @@ function updateStatus() {
         let bot = hubBots[name];
 
         if (bot.getIsConnected()) {
+            console.log(bot.getHubName());
             db.set(`${name}-status`, 1);
         } else {
             db.set(`${name}-status`, 0);
@@ -230,13 +232,6 @@ async function getAllUptimes(hubNames: string[], res: express.Response) {
         uptimes[name] = await getUptimePromise(name);
     }
     res.json(uptimes);
-    //Mock
-    // res.json({
-    //     "DeZire": 11,
-    //     "Hell": 21,
-    //     "Nebula": 10
-    // });
-
 }
 async function getStatusPromise(name: string) {
     return new Promise<number>((res, rej) => {
@@ -252,12 +247,6 @@ async function getAllStatuses(hubNames: string[], res: express.Response) {
         status[name] = await getStatusPromise(name);
     }
     res.json(status);
-    // Mock
-    // res.json({
-    //     "DeZire": 1,
-    //     "Hell": 2,
-    //     "Nebula": 0
-    // });
 }
 
 async function getRecordPromise(name: string) {
@@ -274,10 +263,4 @@ async function getAllRecords(hubNames: string[], res: express.Response) {
         status[name] = await getRecordPromise(name);
     }
     res.json(status);
-    //Mock
-    // res.json({
-    //     "DeZire": 2122,
-    //     "Hell": 2222,
-    //     "Nebula": 2022
-    // });
 }
