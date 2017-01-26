@@ -1,8 +1,0 @@
-[{
-    "name": "whatstatus.info",
-    "script": "WhatStatus.js",
-    "cwd": "/var/www/whatstatus.info/WhatStatus/",
-    "env": {
-        "NODE_ENV": "production"
-    }
-}]

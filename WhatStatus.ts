@@ -15,19 +15,21 @@ import * as bodyParser from 'body-parser';
 import * as favicon from 'serve-favicon';
 
 let cronJob = cron.CronJob;
-var app = express();
-var db = redis.createClient();
+let app = express();
+let db = redis.createClient();
 //TODO: remove sync call
-var hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
-var hubBots: { [name: string]: nmdc.Nmdc } = {};
+let hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
+let hubBots: { [name: string]: nmdc.Nmdc } = {};
 
-for (var name in hubs) {
-    var ip = hubs[name].ip;
-    var port = hubs[name].port;
-    var bot = new nmdc.Nmdc({
+for (let name in hubs) {
+    let ip = hubs[name].ip;
+    let port = hubs[name].port;
+    let bot = new nmdc.Nmdc({
         address: ip,
         port: port,
-        auto_reconnect: true
+        auto_reconnect: true,
+        nick: hubs[name].nick,
+        password: hubs[name].pass
     }, () => {
         hubBots[name] = bot;
     });
@@ -93,7 +95,7 @@ app.get('/faq', function (req, res) {
 // JSON Response for uptime values
 app.get('/api/uptime', function (req, res) {
     let hubNames: string[] = [];
-    for (var name in hubBots) {
+    for (let name in hubBots) {
         hubNames.push(name);
     }
     getAllUptimes(hubNames, res);
@@ -102,7 +104,7 @@ app.get('/api/uptime', function (req, res) {
 // JSON Response for uptime records
 app.get('/api/records', function (req, res) {
     let hubNames: string[] = [];
-    for (var name in hubBots) {
+    for (let name in hubBots) {
         hubNames.push(name);
     }
     getAllRecords(hubNames, res);
@@ -111,7 +113,7 @@ app.get('/api/records', function (req, res) {
 // JSON Response for current component status
 app.get('/api/status', function (req, res) {
     let hubNames: string[] = [];
-    for (var name in hubBots) {
+    for (let name in hubBots) {
         hubNames.push(name);
     }
     getAllStatuses(hubNames, res);
@@ -120,9 +122,9 @@ app.get('/api/status', function (req, res) {
 // JSON Response for tracker uptime with time stamps
 app.get('/api/uptime/tracker', function (req, res) {
     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
-        var jsonObj = {};
-        for (var i = 0; i < uptimesTrackerHistory.length; i++) {
-            var tokens = uptimesTrackerHistory[i].split(':')
+        let jsonObj = {};
+        for (let i = 0; i < uptimesTrackerHistory.length; i++) {
+            let tokens = uptimesTrackerHistory[i].split(':')
             jsonObj[tokens[0]] = tokens[1]
         }
         res.json(jsonObj)
@@ -132,9 +134,9 @@ app.get('/api/uptime/tracker', function (req, res) {
 // JSON Response for tracker uptime with time stamps [array]
 app.get('/api/2/uptime/tracker', function (req, res) {
     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
-        var jsonArray = [];
-        for (var i = 0; i < uptimesTrackerHistory.length; i++) {
-            var tokens = uptimesTrackerHistory[i].split(':')
+        let jsonArray = [];
+        for (let i = 0; i < uptimesTrackerHistory.length; i++) {
+            let tokens = uptimesTrackerHistory[i].split(':')
             jsonArray.push({
                 timestamp: tokens[0],
                 status: tokens[1]
@@ -184,8 +186,8 @@ http.createServer(app).listen(app.get('port'), function () {
 });
 
 function updateStatus() {
-    for (var name in hubBots) {
-        var bot = hubBots[name];
+    for (let name in hubBots) {
+        let bot = hubBots[name];
 
         if (bot.getIsConnected()) {
             db.set(`${name}-status`, 1);
@@ -233,7 +235,7 @@ async function getUptimePromise(name: string) {
 
 async function getAllUptimes(hubNames: string[], res: express.Response) {
     let uptimes = {};
-    for (var name of hubNames) {
+    for (let name of hubNames) {
         uptimes[name] = await getUptimePromise(name);
     }
     res.json(uptimes);
@@ -255,7 +257,7 @@ async function getStatusPromise(name: string) {
 
 async function getAllStatuses(hubNames: string[], res: express.Response) {
     let status = {};
-    for (var name of hubNames) {
+    for (let name of hubNames) {
         status[name] = await getStatusPromise(name);
     }
     res.json(status);
@@ -277,7 +279,7 @@ async function getRecordPromise(name: string) {
 
 async function getAllRecords(hubNames: string[], res: express.Response) {
     let status = {};
-    for (var name of hubNames) {
+    for (let name of hubNames) {
         status[name] = await getRecordPromise(name);
     }
     res.json(status);

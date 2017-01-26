@@ -54,16 +54,21 @@ var db = redis.createClient();
 //TODO: remove sync call
 var hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
 var hubBots = {};
-for (var name in hubs) {
-    var ip = hubs[name].ip;
-    var port = hubs[name].port;
+var _loop_1 = function (name_1) {
+    var ip = hubs[name_1].ip;
+    var port = hubs[name_1].port;
     var bot = new nmdc.Nmdc({
         address: ip,
         port: port,
-        auto_reconnect: true
+        auto_reconnect: true,
+        nick: hubs[name_1].nick,
+        password: hubs[name_1].pass
     }, function () {
-        hubBots[name] = bot;
+        hubBots[name_1] = bot;
     });
+};
+for (var name_1 in hubs) {
+    _loop_1(name_1);
 }
 // Catch connection errors if redis-server isn't running
 db.on("error", function (err) {
@@ -117,24 +122,24 @@ app.get('/faq', function (req, res) {
 // JSON Response for uptime values
 app.get('/api/uptime', function (req, res) {
     var hubNames = [];
-    for (var name in hubBots) {
-        hubNames.push(name);
+    for (var name_2 in hubBots) {
+        hubNames.push(name_2);
     }
     getAllUptimes(hubNames, res);
 });
 // JSON Response for uptime records
 app.get('/api/records', function (req, res) {
     var hubNames = [];
-    for (var name in hubBots) {
-        hubNames.push(name);
+    for (var name_3 in hubBots) {
+        hubNames.push(name_3);
     }
     getAllRecords(hubNames, res);
 });
 // JSON Response for current component status
 app.get('/api/status', function (req, res) {
     var hubNames = [];
-    for (var name in hubBots) {
-        hubNames.push(name);
+    for (var name_4 in hubBots) {
+        hubNames.push(name_4);
     }
     getAllStatuses(hubNames, res);
 });
@@ -170,9 +175,9 @@ function initializeRedis(component) {
         }
     });
 }
-for (var name_1 in hubs) {
-    initializeRedis(name_1 + "-status");
-    db.set("uptime:" + name_1, 0);
+for (var name_5 in hubs) {
+    initializeRedis(name_5 + "-status");
+    db.set("uptime:" + name_5, 0);
 }
 // Check Site Components (Cronjob running every minute)
 new cronJob('*/1 * * * *', function () {
@@ -194,47 +199,47 @@ http.createServer(app).listen(app.get('port'), function () {
     console.log("WhatStatus server listening on port: " + app.get('port'));
 });
 function updateStatus() {
-    for (var name in hubBots) {
-        var bot = hubBots[name];
+    for (var name_6 in hubBots) {
+        var bot = hubBots[name_6];
         if (bot.getIsConnected()) {
-            db.set(name + "-status", 1);
+            db.set(name_6 + "-status", 1);
         }
         else {
-            db.set(name + "-status", 0);
+            db.set(name_6 + "-status", 0);
         }
     }
 }
 function updateUptime() {
-    var _loop_1 = function (name_2) {
-        db.get(name_2 + "-status", function (err, stat) {
+    var _loop_2 = function (name_7) {
+        db.get(name_7 + "-status", function (err, stat) {
             if (stat != 0) {
-                db.incr("uptime:" + name_2);
-                db.get("uptime:" + name_2, function (err, stat) {
-                    db.get("uptime-record:" + name_2, function (err, record) {
+                db.incr("uptime:" + name_7);
+                db.get("uptime:" + name_7, function (err, stat) {
+                    db.get("uptime-record:" + name_7, function (err, record) {
                         if (record < stat) {
-                            db.set("uptime-record:" + name_2, stat);
+                            db.set("uptime-record:" + name_7, stat);
                         }
                     });
                 });
             }
         });
     };
-    for (var name_2 in hubBots) {
-        _loop_1(name_2);
+    for (var name_7 in hubBots) {
+        _loop_2(name_7);
     }
 }
 function updateRecords() {
-    var _loop_2 = function (name_3) {
-        db.get("uptime:" + name_3, function (err, stat) {
-            db.get("uptime-record:" + name_3, function (err, record) {
+    var _loop_3 = function (name_8) {
+        db.get("uptime:" + name_8, function (err, stat) {
+            db.get("uptime-record:" + name_8, function (err, record) {
                 if (record < stat) {
-                    db.set("uptime-record:" + name_3, stat);
+                    db.set("uptime-record:" + name_8, stat);
                 }
             });
         });
     };
-    for (var name_3 in hubBots) {
-        _loop_2(name_3);
+    for (var name_8 in hubBots) {
+        _loop_3(name_8);
     }
 }
 function getUptimePromise(name) {
@@ -250,7 +255,7 @@ function getUptimePromise(name) {
 }
 function getAllUptimes(hubNames, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var uptimes, _i, hubNames_1, name, _a, _b;
+        var uptimes, _i, hubNames_1, name_9, _a, _b;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
@@ -259,10 +264,10 @@ function getAllUptimes(hubNames, res) {
                     _c.label = 1;
                 case 1:
                     if (!(_i < hubNames_1.length)) return [3 /*break*/, 4];
-                    name = hubNames_1[_i];
+                    name_9 = hubNames_1[_i];
                     _a = uptimes;
-                    _b = name;
-                    return [4 /*yield*/, getUptimePromise(name)];
+                    _b = name_9;
+                    return [4 /*yield*/, getUptimePromise(name_9)];
                 case 2:
                     _a[_b] = _c.sent();
                     _c.label = 3;
@@ -289,7 +294,7 @@ function getStatusPromise(name) {
 }
 function getAllStatuses(hubNames, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var status, _i, hubNames_2, name, _a, _b;
+        var status, _i, hubNames_2, name_10, _a, _b;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
@@ -298,10 +303,10 @@ function getAllStatuses(hubNames, res) {
                     _c.label = 1;
                 case 1:
                     if (!(_i < hubNames_2.length)) return [3 /*break*/, 4];
-                    name = hubNames_2[_i];
+                    name_10 = hubNames_2[_i];
                     _a = status;
-                    _b = name;
-                    return [4 /*yield*/, getStatusPromise(name)];
+                    _b = name_10;
+                    return [4 /*yield*/, getStatusPromise(name_10)];
                 case 2:
                     _a[_b] = _c.sent();
                     _c.label = 3;
@@ -328,7 +333,7 @@ function getRecordPromise(name) {
 }
 function getAllRecords(hubNames, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var status, _i, hubNames_3, name, _a, _b;
+        var status, _i, hubNames_3, name_11, _a, _b;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
@@ -337,10 +342,10 @@ function getAllRecords(hubNames, res) {
                     _c.label = 1;
                 case 1:
                     if (!(_i < hubNames_3.length)) return [3 /*break*/, 4];
-                    name = hubNames_3[_i];
+                    name_11 = hubNames_3[_i];
                     _a = status;
-                    _b = name;
-                    return [4 /*yield*/, getRecordPromise(name)];
+                    _b = name_11;
+                    return [4 /*yield*/, getRecordPromise(name_11)];
                 case 2:
                     _a[_b] = _c.sent();
                     _c.label = 3;
