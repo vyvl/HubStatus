@@ -75,21 +75,12 @@ db.on("error", function (err) {
     console.log(err.toString());
     console.log("       Make sure redis-server is started and listening for connections.");
 });
-app.configure(function () {
-    app.set('port', process.env.PORT || 3000);
-    app.set('views', __dirname + '/views');
-    app.set('view engine', 'jade');
-    app.use(favicon('public/images/favicon.ico'));
-    app.use(bodyParser());
-    // app.use(express.methodOverride());
-    app.use(app.router);
-    app.use(express.static(path.join(__dirname, 'public')));
-});
-app.configure('development', function () {
-    // app.use(express.errorHandler());
-    app.locals.pretty = true;
-    // app.use(express.logger('dev'));
-});
+app.set('port', process.env.PORT || 3000);
+app.set('views', __dirname + '/views');
+app.set('view engine', 'jade');
+app.use(favicon('public/images/favicon.ico'));
+app.use(bodyParser());
+app.use(express.static(path.join(__dirname, 'public')));
 // If there's an outtage reset uptime record counter.
 function reset_uptime(component) {
     db.set('uptime:' + component, 0);
