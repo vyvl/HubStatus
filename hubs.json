@@ -1,31 +1,31 @@
 {
     "HD-BITS": {
-        "ip": "hdbits.tech",
+        "ip": "127.0.0.1",
         "port": 411,
         "nick": "pinger",
         "pass": ""
     },
     "DeZire": {
-        "ip": "172.17.32.45",
+        "ip": "127.0.0.1",
         "port": 411,
         "nick": "pinger2",
         "pass": ""
     },
     "Nebula": {
-        "ip": "172.17.23.24",
-        "port": 411,
+        "ip": "127.0.0.1",
+        "port": 414,
         "nick": "pinger3",
         "pass": ""
     },
     "Jhanjhatless": {
-        "ip": "172.17.14.31",
+        "ip": "127.0.0.1",
         "port": 411,
         "nick": "pinger4",
         "pass": ""
     },
     "Hell": {
-        "ip": "172.17.25.23",
-        "port": 411,
+        "ip": "127.0.0.1",
+        "port": 413,
         "nick": "pinger4",
         "pass": ""
     }

@@ -25,7 +25,10 @@ for (let name in hubs) {
         nick: hubs[name].nick,
         password: hubs[name].pass,
         share: 11995116277760
+    }, () => {
+        db.set(`${name}-status`, 1);
     });
+    bot.onClosed = () => { db.set(`${name}-status`, 0); }
     hubBots[name] = bot;
 }
 
@@ -138,22 +141,14 @@ http.createServer(app).listen(app.get('port'), function () {
 
 
 for (let name in hubs) {
-    db.exists(`${name}-status`, (err, val: boolean) => {
-        if (!val) {
-            db.set(`${name}-status`, 3);
-        }
-    });
+    db.set(`${name}-status`, 3);
     db.set(`uptime:${name}`, 0);
-    db.exists(`flag:${name}`, (err, val: boolean) => {
-        if (!val) {
-            db.set(`flag:${name}`, 1);
-        }
-    });
-    db.exists(`uptime-record:${name}`, (err, val: boolean) => {
+    db.set(`flag:${name}`, 0);
+    db.exists(`uptime-record:${name}`, (err, val: number) => {
         if (!val) {
             db.set(`uptime-record:${name}`, 0);
         }
-    })
+    });
 }
 
 // Check Site Components (Cronjob running every minute)
@@ -179,9 +174,15 @@ new cronJob('*/1 * * * *', function () {
 function updateStatus() {
     for (let name in hubBots) {
         let bot = hubBots[name];
-        if (bot.getIsConnected()) {
+        let connName = bot.getHubName();
+        console.log(bot.getIsConnected() + bot.getHubName());
+
+        if (bot.getIsConnected() && (connName && connName.trim())) {
             db.set(`${name}-status`, 1);
             db.set(`flag:${name}`, 1);
+        }
+        else if (bot.getIsConnected()) {
+            db.set(`${name}-status`, 3);
         }
         else {
             db.get(`flag:${name}`, (err, reply: number) => {
