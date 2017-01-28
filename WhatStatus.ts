@@ -176,20 +176,19 @@ function updateStatus() {
         let bot = hubBots[name];
 
         if (bot.getIsConnected()) {
-            console.log(bot.getHubName());
             db.set(`${name}-status`, 1);
             db.set(`flag:${name}`, 1);
         } else {
             db.get(`flag:${name}`, (err, reply: number) => {
-                    if (reply == 1 || reply == 2) {
-                        db.set(`${name}-status`, 2);
-                    }
-                    else {
-                        db.set(`${name}-status`, 0);
-                    }
-                    let tempflag = reply++
-                    db.set(`flag:${name}`, tempflag);
-            });         
+                if (reply == 1 || reply == 2) {
+                    db.set(`${name}-status`, 2);
+                }
+                else {
+                    db.set(`${name}-status`, 0);
+                }
+                let tempflag = reply++
+                db.set(`flag:${name}`, tempflag);
+            });
         }
     }
 }
