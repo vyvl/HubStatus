@@ -151,13 +151,21 @@ app.get('/api/2/uptime/tracker', function (req, res) {
         res.json(jsonArray);
     });
 });
-function initializeRedis(component) {
-    db.set(component, 2);
-}
+http.createServer(app).listen(app.get('port'), function () {
+    console.log("HubStatus server listening on port: " + app.get('port'));
+});
 var _loop_1 = function (name_5) {
-    initializeRedis(name_5 + "-status");
+    db.exists(name_5 + "-status", function (err, val) {
+        if (!val) {
+            db.set(name_5 + "-status", 3);
+        }
+    });
     db.set("uptime:" + name_5, 0);
-    db.set("flag:" + name_5, 1);
+    db.exists("flag:" + name_5, function (err, val) {
+        if (!val) {
+            db.set("flag:" + name_5, 1);
+        }
+    });
     db.exists("uptime-record:" + name_5, function (err, val) {
         if (!val) {
             db.set("uptime-record:" + name_5, 0);
@@ -182,9 +190,6 @@ new cronJob('*/1 * * * *', function () {
     console.log("[Stats] Cronjob started");
     updateUptime();
 }, null, true, null, null, true);
-http.createServer(app).listen(app.get('port'), function () {
-    console.log("HubStatus server listening on port: " + app.get('port'));
-});
 function updateStatus() {
     var _loop_2 = function (name_6) {
         var bot = hubBots[name_6];
@@ -201,8 +206,7 @@ function updateStatus() {
                 else {
                     db.set(name_6 + "-status", 0);
                 }
-                var tempflag = reply++;
-                db.set("flag:" + name_6, tempflag);
+                db.incr("flag:" + name_6);
             });
         }
     };
@@ -213,7 +217,7 @@ function updateStatus() {
 function updateUptime() {
     var _loop_3 = function (name_7) {
         db.get(name_7 + "-status", function (err, stat) {
-            if (stat != 0) {
+            if (stat != 0 && stat != 2 && stat != 3) {
                 db.incr("uptime:" + name_7);
                 db.get("uptime:" + name_7, function (err, stat) {
                     db.get("uptime-record:" + name_7, function (err, record) {

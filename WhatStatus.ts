@@ -132,14 +132,23 @@ app.get('/api/2/uptime/tracker', function (req, res) {
     })
 })
 
-function initializeRedis(component) {
-    db.set(component, 2);
-}
+http.createServer(app).listen(app.get('port'), function () {
+    console.log("HubStatus server listening on port: " + app.get('port'));
+});
+
 
 for (let name in hubs) {
-    initializeRedis(`${name}-status`);
+    db.exists(`${name}-status`, (err, val: boolean) => {
+        if (!val) {
+            db.set(`${name}-status`, 3);
+        }
+    });
     db.set(`uptime:${name}`, 0);
-    db.set(`flag:${name}`, 1);
+    db.exists(`flag:${name}`, (err, val: boolean) => {
+        if (!val) {
+            db.set(`flag:${name}`, 1);
+        }
+    });
     db.exists(`uptime-record:${name}`, (err, val: boolean) => {
         if (!val) {
             db.set(`uptime-record:${name}`, 0);
@@ -163,22 +172,18 @@ and updating the uptime records if the current uptime > the old record.
 
 new cronJob('*/1 * * * *', function () {
     console.log("[Stats] Cronjob started");
-
     updateUptime();
 }, null, true, null, null, true);
 
-http.createServer(app).listen(app.get('port'), function () {
-    console.log("HubStatus server listening on port: " + app.get('port'));
-});
 
 function updateStatus() {
     for (let name in hubBots) {
         let bot = hubBots[name];
-
         if (bot.getIsConnected()) {
             db.set(`${name}-status`, 1);
             db.set(`flag:${name}`, 1);
-        } else {
+        }
+        else {
             db.get(`flag:${name}`, (err, reply: number) => {
                 if (reply == 1 || reply == 2) {
                     db.set(`${name}-status`, 2);
@@ -195,7 +200,7 @@ function updateStatus() {
 function updateUptime() {
     for (let name in hubBots) {
         db.get(`${name}-status`, (err, stat: number) => {
-            if (stat != 0) {
+            if (stat != 0 && stat != 2 && stat != 3) {
                 db.incr(`uptime:${name}`);
                 db.get(`uptime:${name}`, (err, stat: number) => {
                     db.get(`uptime-record:${name}`, (err, record: number) => {
