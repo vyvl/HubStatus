@@ -143,7 +143,7 @@ http.createServer(app).listen(app.get('port'), function () {
 for (let name in hubs) {
     db.set(`${name}-status`, 3);
     db.set(`uptime:${name}`, 0);
-    db.set(`flag:${name}`, 0);
+    db.set(`flag:${name}`, 1);
     db.exists(`uptime-record:${name}`, (err, val: number) => {
         if (!val) {
             db.set(`uptime-record:${name}`, 0);
