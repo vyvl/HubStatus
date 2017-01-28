@@ -2,9 +2,13 @@ extends layout
 block body-content
     div#content
         h2
-            a(href="/") WhatStatus.info
+            a(href="/") HubStatus.info
         h3 About
-        p The services are checked every minute, if a service is down for more than 3 minutes it's reflected on the site.
+        p We check the all the HUBS once per minute, if a service is down for more than three minutes it's considered offline, if it responded only once or twice in three minutes, it's considered unstable.
+
+        p When checking the hubs for their online status we use a basic TCP handshake.
+
+        p All our APIs use JSON (JavaScript Object Notation) which is very easy to parse. You'll find pre-made JSON decoders for almost all languages. You may query the APIs in any project you like but please limit queries to once per minute as that is how often the data is updated.	
 
         h3 API
 
@@ -15,25 +19,31 @@ block body-content
             p.api-description Uptime of all the components. [hours]
 
         p.api
-            a(href="api/uptime/tracker") api/uptime/tracker
-            p.api-description Tracker uptime history over the last ~24 hours. [hours]
+            a(href="api/uptime/tracker") api/uptime/hubs
+            p.api-description Hubs' uptime history over the last ~24 hours. [hours]
             p.api-description Timestamp: 200320132025 [DDMMYYYYHHMM]
 
         p.api
             a(href="api/status") api/status
-            p.api-description The service status. [1 for up, 0 down]
+            p.api-description 1 = online, service responded perfectly over the past 3 minutes
+
+            p.api-description 0 = offline, no response over the past 3 minutes
+
+            p.api-description 2 = unstable, intermittent responses over the past 3 minutes
+
+            p.api-description If you need an example for this API simply view the source code for the 
+                              a(href="/") main page
+                              which calls this API through Javascript.
 
         p.api
             a(href="api/records") api/records
             p.api-description The uptime records for the components. [hours]
 
         h3 Bugs & Feedback
-        p
-            a(href="https://what.cd/user.php?id=160169") What.CD and What.CD IRC Network
-        p
-            a(href="https://github.com/dewey/WhatStatus") WhatStatus on GitHub
-        p
-            a(href="https://what.cd/forums.php?action=viewthread&threadid=136411") Laboratory Thread on What.CD
+        p We appreciate your valuable feedback and suggestions.
+
+        p 
+            a(href="dchub://hdbits.tech") Reach us at #support channel on HDBITS.tech
 
         h3 Powered by
 
@@ -42,6 +52,7 @@ block body-content
                 img(src="images/logos/nodejs.png")
             li
                 img(src="images/logos/redis.png")
-        
-    a(href="https://twitter.com/#!/WhatcdStatus")
-        img(src="images/twitter.png", alt="Follow us on Twitter!", class="follow-us")
+            li
+                img(src="images/logos/winserver.png")
+            li
+                img(src="images/logos/DCPlusPlus.png")

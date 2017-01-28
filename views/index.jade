@@ -3,15 +3,27 @@ extends layout
 block body-content
     script(type='text/javascript').
         $.getJSON("/api/status", function(components) {
+            //data = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
+            var temp;
+
+            //var oReq = new XMLHttpRequest();
+            //oReq.onload = reqListener;
+            //oReq.open("get", "hubs.json", true);
+            //oReq.send();
+
+            //function reqListener(e) {
+              //  temp = JSON.parse(this.responseText);
+            //}
             $('table.service-table').empty();
                 var body = $('<tbody>');
                 $('table.service-table').append(body);
             for (var component in components) {
                 var name = component;
-
-                
+                //address=temp[name].ip;
                 var row = $('<tr>')
                 body.append(row);
+                //var dynName = $('<tr>')
+                //body.append(dynName);
                 var img = $('<img>').attr('id', 'status-' + name + '-icon');
                 var ico = $('<td>').addClass('icon').append(img);
                 row.append(ico);
@@ -21,16 +33,20 @@ block body-content
                 row.append(stat);
 
                 if(components[component] == 1) {
-                    $("#status-" + component).html("Up");
-                    $("#status-" + component).css("color", "#089a00");
-                    $("#status-" + component + "-icon").attr('src', "images/up.png");
+                    $("#status-" + component).html("Online");
+                    $("#status-" + component).css("color", "#77e177");
+                    $("#status-" + component + "-icon").attr('src', "images/up.png?time=1444547002").attr('width', "38px");
                 } else if (components[component] == 0) {
-                    $("#status-" + component).html("Down");
-                    $("#status-" + component).css("color", "#ff1600");
-                    $("#status-" + component + "-icon").attr('src', "images/down.png");
+                    $("#status-" + component).html("Offline");
+                    $("#status-" + component).css("color", "#e17777");
+                    $("#status-" + component + "-icon").attr('src', "images/down.png?time=1444547039").attr('width', "38px");
+                } else if (components[component] == 2) {
+                    $("#status-" + component).html("Unstable");
+                    $("#status-" + component).css("color", "#e1d377");
+                    $("#status-" + component + "-icon").attr('src', "images/iffy.gif?time=1444637674").attr('width', "38px");
                 } else {
                     $("#status-" + component).html("Updating...");
-                    $("#status-" + component + "-icon").attr('src', "images/updating.png");
+                    $("#status-" + component + "-icon").attr('src', "images/updating.gif?time=1444549150");
                 }
             }
         });
@@ -40,11 +56,11 @@ block body-content
             img(src='#{logo_url}')
         div.status-dashboard
             table.service-table
-                //- tr
-                //-     td.icon
-                //-         img(src, id='status-site-icon')
-                //-     td.service Site - what.cd
-                //-     td#status-site
+                tr
+                    td.icon
+                        img(src, id='status-site-icon')
+                    td.service The Site Seems Down ! :(
+                    td#status-site
                 //- tr
                 //-     td.icon
                 //-         img(src, id='status-tracker-icon')
@@ -55,8 +71,14 @@ block body-content
                 //-         img(src, id='status-irc-icon')
                 //-     td.service IRC - irc.what-network.net
                 //-     td#status-irc
-        div.disclaimer
-            p This site is unofficial and is not affiliated with What.CD.
+
+    div.twitter
+        div.twitter_innter_content
+            a(class="twitter-timeline",href="https://twitter.com/pilanipirates",data-tweet-limit=20,data-theme="dark",data-chrome="noheader, nofooter, noscrollbar, noborders, transparent",height="246")
+            script(async,src="//platform.twitter.com/widgets.js",charset="utf-8")
+
+    div.disclaimer
+        p This site is unofficial and is not affiliated to BITS Pilani.
 
 
 

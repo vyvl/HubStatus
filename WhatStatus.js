@@ -1,8 +1,3 @@
-/**
- * WhatStatus.info is a simple status page for torrent site.
- * @author dewey
- * https://github.com/dewey/WhatStatus
- */
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -62,7 +57,8 @@ for (var name_1 in hubs) {
         port: port,
         auto_reconnect: true,
         nick: hubs[name_1].nick,
-        password: hubs[name_1].pass
+        password: hubs[name_1].pass,
+        share: 11995116277760
     });
     hubBots[name_1] = bot;
 }
@@ -74,7 +70,7 @@ db.on("error", function (err) {
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
-app.use(favicon('public/images/favicon.ico'));
+app.use(favicon('public/images/favicon_1.ico'));
 app.use(bodyParser());
 app.use(express.static(path.join(__dirname, 'public')));
 // If there's an outtage reset uptime record counter.
@@ -84,26 +80,26 @@ function reset_uptime(component) {
 // Render the index page
 app.get('/', function (req, res) {
     res.render('index', {
-        title: 'WhatStatus',
+        title: 'HubStatus',
         logo_url: 'images/logos/logo.png'
     });
 });
 // Render the Stats page
 app.get('/stats', function (req, res) {
     res.render('stats', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 });
 // Render the About page
 app.get('/about', function (req, res) {
     res.render('about', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 });
 // Render the FAQ page
 app.get('/faq', function (req, res) {
     res.render('faq', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 });
 // JSON Response for uptime values
@@ -161,6 +157,7 @@ function initializeRedis(component) {
 var _loop_1 = function (name_5) {
     initializeRedis(name_5 + "-status");
     db.set("uptime:" + name_5, 0);
+    db.set("flag:" + name_5, 1);
     db.exists("uptime-record:" + name_5, function (err, val) {
         if (!val) {
             db.set("uptime-record:" + name_5, 0);
@@ -177,7 +174,6 @@ new cronJob('*/1 * * * *', function () {
 }, null, true, null, null, true);
 /*
 Statistics (minute)
-
 This cronjob is incrementing the uptime counters for the various monitored components
 and updating the uptime records if the current uptime > the old record.
 */
@@ -187,22 +183,35 @@ new cronJob('*/1 * * * *', function () {
     updateUptime();
 }, null, true, null, null, true);
 http.createServer(app).listen(app.get('port'), function () {
-    console.log("WhatStatus server listening on port: " + app.get('port'));
+    console.log("HubStatus server listening on port: " + app.get('port'));
 });
 function updateStatus() {
-    for (var name_6 in hubBots) {
+    var _loop_2 = function (name_6) {
         var bot = hubBots[name_6];
         if (bot.getIsConnected()) {
             console.log(bot.getHubName());
             db.set(name_6 + "-status", 1);
+            db.set("flag:" + name_6, 1);
         }
         else {
-            db.set(name_6 + "-status", 0);
+            db.get("flag:" + name_6, function (err, reply) {
+                if (reply == 1 || reply == 2) {
+                    db.set(name_6 + "-status", 2);
+                }
+                else {
+                    db.set(name_6 + "-status", 0);
+                }
+                var tempflag = reply++;
+                db.set("flag:" + name_6, tempflag);
+            });
         }
+    };
+    for (var name_6 in hubBots) {
+        _loop_2(name_6);
     }
 }
 function updateUptime() {
-    var _loop_2 = function (name_7) {
+    var _loop_3 = function (name_7) {
         db.get(name_7 + "-status", function (err, stat) {
             if (stat != 0) {
                 db.incr("uptime:" + name_7);
@@ -217,11 +226,11 @@ function updateUptime() {
         });
     };
     for (var name_7 in hubBots) {
-        _loop_2(name_7);
+        _loop_3(name_7);
     }
 }
 function updateRecords() {
-    var _loop_3 = function (name_8) {
+    var _loop_4 = function (name_8) {
         db.get("uptime:" + name_8, function (err, stat) {
             db.get("uptime-record:" + name_8, function (err, record) {
                 if (record < stat) {
@@ -231,7 +240,7 @@ function updateRecords() {
         });
     };
     for (var name_8 in hubBots) {
-        _loop_3(name_8);
+        _loop_4(name_8);
     }
 }
 function getUptimePromise(name) {

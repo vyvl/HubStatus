@@ -1,9 +1,3 @@
-/**
- * WhatStatus.info is a simple status page for torrent site.
- * @author dewey
- * https://github.com/dewey/WhatStatus
- */
-
 import * as express from 'express';
 import * as http from 'http';
 import * as path from 'path';
@@ -29,7 +23,8 @@ for (let name in hubs) {
         port: port,
         auto_reconnect: true,
         nick: hubs[name].nick,
-        password: hubs[name].pass
+        password: hubs[name].pass,
+        share: 11995116277760
     });
     hubBots[name] = bot;
 }
@@ -43,7 +38,7 @@ db.on("error", function (err) {
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
-app.use(favicon('public/images/favicon.ico'));
+app.use(favicon('public/images/favicon_1.ico'));
 app.use(bodyParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -57,7 +52,7 @@ function reset_uptime(component) {
 // Render the index page
 app.get('/', function (req, res) {
     res.render('index', {
-        title: 'WhatStatus',
+        title: 'HubStatus',
         logo_url: 'images/logos/logo.png'
     });
 })
@@ -65,21 +60,21 @@ app.get('/', function (req, res) {
 // Render the Stats page
 app.get('/stats', function (req, res) {
     res.render('stats', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 })
 
 // Render the About page
 app.get('/about', function (req, res) {
     res.render('about', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 })
 
 // Render the FAQ page
 app.get('/faq', function (req, res) {
     res.render('faq', {
-        title: 'WhatStatus'
+        title: 'HubStatus'
     });
 })
 
@@ -144,6 +139,7 @@ function initializeRedis(component) {
 for (let name in hubs) {
     initializeRedis(`${name}-status`);
     db.set(`uptime:${name}`, 0);
+    db.set(`flag:${name}`, 1);
     db.exists(`uptime-record:${name}`, (err, val: boolean) => {
         if (!val) {
             db.set(`uptime-record:${name}`, 0);
@@ -154,13 +150,11 @@ for (let name in hubs) {
 // Check Site Components (Cronjob running every minute)
 new cronJob('*/1 * * * *', function () {
     console.log('Checking status of hubs');
-
     updateStatus();
 }, null, true, null, null, true);
 
 /*
 Statistics (minute)
-
 This cronjob is incrementing the uptime counters for the various monitored components
 and updating the uptime records if the current uptime > the old record.
 */
@@ -174,7 +168,7 @@ new cronJob('*/1 * * * *', function () {
 }, null, true, null, null, true);
 
 http.createServer(app).listen(app.get('port'), function () {
-    console.log("WhatStatus server listening on port: " + app.get('port'));
+    console.log("HubStatus server listening on port: " + app.get('port'));
 });
 
 function updateStatus() {
@@ -184,8 +178,18 @@ function updateStatus() {
         if (bot.getIsConnected()) {
             console.log(bot.getHubName());
             db.set(`${name}-status`, 1);
+            db.set(`flag:${name}`, 1);
         } else {
-            db.set(`${name}-status`, 0);
+            db.get(`flag:${name}`, (err, reply: number) => {
+                    if (reply == 1 || reply == 2) {
+                        db.set(`${name}-status`, 2);
+                    }
+                    else {
+                        db.set(`${name}-status`, 0);
+                    }
+                    let tempflag = reply++
+                    db.set(`flag:${name}`, tempflag);
+            });         
         }
     }
 }
