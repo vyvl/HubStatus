@@ -1,0 +1,32 @@
+{
+    "HD-BITS": {
+        "ip": "hdbits.tech",
+        "port": 411,
+        "nick": "pinger",
+        "pass": ""
+    },
+    "DeZire": {
+        "ip": "172.17.32.45",
+        "port": 411,
+        "nick": "pinger2",
+        "pass": ""
+    },
+    "Nebula": {
+        "ip": "172.17.23.24",
+        "port": 411,
+        "nick": "pinger3",
+        "pass": ""
+    },
+    "Jhanjhatless": {
+        "ip": "172.17.14.31",
+        "port": 411,
+        "nick": "pinger4",
+        "pass": ""
+    },
+    "Hell": {
+        "ip": "172.17.25.23",
+        "port": 411,
+        "nick": "pinger4",
+        "pass": ""
+    }
+}
