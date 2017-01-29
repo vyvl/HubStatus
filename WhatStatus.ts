@@ -7,15 +7,17 @@ import * as nmdc from 'nmdc';
 import * as fs from 'fs';
 import * as bodyParser from 'body-parser';
 import * as favicon from 'serve-favicon';
+import { HubStore } from './store';
 
 let cronJob = cron.CronJob;
 let app = express();
-let db = redis.createClient();
+let store = new HubStore('hubstore.db');
 //TODO: remove sync call
 let hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
 let hubBots: { [name: string]: nmdc.Nmdc } = {};
-
+let cronString = '*/5 * * * * *';
 for (let name in hubs) {
+    store.initHub(name);
     let ip = hubs[name].ip;
     let port = hubs[name].port;
     let bot = new nmdc.Nmdc({
@@ -26,17 +28,12 @@ for (let name in hubs) {
         password: hubs[name].pass,
         share: 11995116277760
     }, () => {
-        db.set(`${name}-status`, 1);
+        store.setHubStatus(name, 1);
     });
-    bot.onClosed = () => { db.set(`${name}-status`, 0); }
+    bot.onClosed = () => { store.setHubStatus(name, 1); }
     hubBots[name] = bot;
 }
-
-// Catch connection errors if redis-server isn't running
-db.on("error", function (err) {
-    console.log(err.toString());
-    console.log("       Make sure redis-server is started and listening for connections.");
-});
+;
 
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
@@ -46,11 +43,6 @@ app.use(bodyParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-
-// If there's an outtage reset uptime record counter.
-function reset_uptime(component) {
-    db.set('uptime:' + component, 0);
-}
 
 // Render the index page
 app.get('/', function (req, res) {
@@ -108,51 +100,42 @@ app.get('/api/status', function (req, res) {
     getAllStatuses(hubNames, res);
 })
 
-// JSON Response for tracker uptime with time stamps
-app.get('/api/uptime/tracker', function (req, res) {
-    db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
-        let jsonObj = {};
-        for (let i = 0; i < uptimesTrackerHistory.length; i++) {
-            let tokens = uptimesTrackerHistory[i].split(':')
-            jsonObj[tokens[0]] = tokens[1]
-        }
-        res.json(jsonObj)
-    })
-})
+// // JSON Response for tracker uptime with time stamps
+// app.get('/api/uptime/tracker', function (req, res) {
+//     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
+//         let jsonObj = {};
+//         for (let i = 0; i < uptimesTrackerHistory.length; i++) {
+//             let tokens = uptimesTrackerHistory[i].split(':')
+//             jsonObj[tokens[0]] = tokens[1]
+//         }
+//         res.json(jsonObj)
+//     })
+// })
 
-// JSON Response for tracker uptime with time stamps [array]
-app.get('/api/2/uptime/tracker', function (req, res) {
-    db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
-        let jsonArray = [];
-        for (let i = 0; i < uptimesTrackerHistory.length; i++) {
-            let tokens = uptimesTrackerHistory[i].split(':')
-            jsonArray.push({
-                timestamp: tokens[0],
-                status: tokens[1]
-            });
-        }
-        res.json(jsonArray)
-    })
-})
+// // JSON Response for tracker uptime with time stamps [array]
+// app.get('/api/2/uptime/tracker', function (req, res) {
+//     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
+//         let jsonArray = [];
+//         for (let i = 0; i < uptimesTrackerHistory.length; i++) {
+//             let tokens = uptimesTrackerHistory[i].split(':')
+//             jsonArray.push({
+//                 timestamp: tokens[0],
+//                 status: tokens[1]
+//             });
+//         }
+//         res.json(jsonArray)
+//     })
+// })
 
 http.createServer(app).listen(app.get('port'), function () {
     console.log("HubStatus server listening on port: " + app.get('port'));
 });
 
 
-for (let name in hubs) {
-    db.set(`${name}-status`, 3);
-    db.set(`uptime:${name}`, 0);
-    db.set(`flag:${name}`, 1);
-    db.exists(`uptime-record:${name}`, (err, val: number) => {
-        if (!val) {
-            db.set(`uptime-record:${name}`, 0);
-        }
-    });
-}
+
 
 // Check Site Components (Cronjob running every minute)
-new cronJob('*/1 * * * *', function () {
+new cronJob(cronString, function () {
     console.log('Checking status of hubs');
     updateStatus();
 }, null, true, null, null, true);
@@ -165,111 +148,72 @@ and updating the uptime records if the current uptime > the old record.
 
 // Initialize Redis Keys to prevent "null" values
 
-new cronJob('*/1 * * * *', function () {
+new cronJob(cronString, function () {
     console.log("[Stats] Cronjob started");
     updateUptime();
 }, null, true, null, null, true);
 
 
-function updateStatus() {
+async function updateStatus() {
     for (let name in hubBots) {
         let bot = hubBots[name];
         let connName = bot.getHubName();
-        console.log(bot.getIsConnected() + bot.getHubName());
 
         if (bot.getIsConnected() && (connName && connName.trim())) {
-            db.set(`${name}-status`, 1);
-            db.set(`flag:${name}`, 1);
+            store.setHubStatus(name, 1);
+            store.setFlag(name, 1);
         }
         else if (bot.getIsConnected()) {
-            db.set(`${name}-status`, 3);
+            store.setHubStatus(name, 3);
         }
         else {
-            db.get(`flag:${name}`, (err, reply: number) => {
-                if (reply == 1 || reply == 2) {
-                    db.set(`${name}-status`, 2);
-                }
-                else {
-                    db.set(`${name}-status`, 0);
-                }
-                let tempflag = reply++
-                db.set(`flag:${name}`, tempflag);
-            });
+            let hub = await store.findOne(name);
+            let reply = hub.flag;
+            if (reply == 1 || reply == 2) {
+                store.setHubStatus(name, 2);
+            }
+            else {
+                store.setHubStatus(name, 0);
+            }
+            let tempflag = ++reply;
+            store.setFlag(name, tempflag);
         }
     }
 }
-function updateUptime() {
-    for (let name in hubBots) {
-        db.get(`${name}-status`, (err, stat: number) => {
-            if (stat != 0 && stat != 2 && stat != 3) {
-                db.incr(`uptime:${name}`);
-                db.get(`uptime:${name}`, (err, stat: number) => {
-                    db.get(`uptime-record:${name}`, (err, record: number) => {
-                        if (record < stat) {
-                            db.set(`uptime-record:${name}`, stat);
-                        }
-                    })
-                });
-            }
-        });
-    }
-}
 
-function updateRecords() {
+async function updateUptime() {
     for (let name in hubBots) {
-        db.get(`uptime:${name}`, (err, stat: number) => {
-            db.get(`uptime-record:${name}`, (err, record: number) => {
-                if (record < stat) {
-                    db.set(`uptime-record:${name}`, stat);
-                }
-            })
-        });
+        let hub = await store.findOne(name);
+        if (hub.status == 1) {
+            store.increaseUptime(name);
+        }
     }
-}
-
-async function getUptimePromise(name: string) {
-    return new Promise<number>((res, rej) => {
-        db.get(`uptime:${name}`, (err, status: number) => {
-            res(status);
-        });
-    })
 }
 
 async function getAllUptimes(hubNames: string[], res: express.Response) {
     let uptimes = {};
     for (let name of hubNames) {
-        uptimes[name] = await getUptimePromise(name);
+        uptimes[name] = (await store.findOne(name)).uptime;
     }
     res.json(uptimes);
 }
-async function getStatusPromise(name: string) {
-    return new Promise<number>((res, rej) => {
-        db.get(`${name}-status`, (err, status: number) => {
-            res(status);
-        });
-    })
-}
+
 
 async function getAllStatuses(hubNames: string[], res: express.Response) {
     let status = {};
     for (let name of hubNames) {
-        status[name] = await getStatusPromise(name);
+        status[name] = (await store.findOne(name)).status;
     }
     res.json(status);
 }
 
-async function getRecordPromise(name: string) {
-    return new Promise<number>((res, rej) => {
-        db.get(`uptime-record:${name}`, (err, status: number) => {
-            res(status);
-        });
-    })
-}
+
 
 async function getAllRecords(hubNames: string[], res: express.Response) {
-    let status = {};
+    let records = {};
     for (let name of hubNames) {
-        status[name] = await getRecordPromise(name);
+        let hub = await store.findOne(name);
+        records[name] = hub.record;
     }
-    res.json(status);
+    res.json(records);
 }
