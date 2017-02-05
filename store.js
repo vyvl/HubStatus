@@ -176,4 +176,3 @@ var HubStore = (function () {
     return HubStore;
 }());
 exports.HubStore = HubStore;
-//# sourceMappingURL=store.js.map

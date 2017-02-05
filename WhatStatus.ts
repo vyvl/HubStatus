@@ -8,6 +8,16 @@ import * as fs from 'fs';
 import * as bodyParser from 'body-parser';
 import * as favicon from 'serve-favicon';
 import { HubStore } from './store';
+import * as plotly from 'plotly';
+let api = JSON.parse(fs.readFileSync('api.key', 'utf8'));
+let username :string;
+let key :string;
+for (let name in api){
+    username = name;
+    key = api[name];
+}
+
+plotly(username,key);
 
 let cronJob = cron.CronJob;
 let app = express();
@@ -15,6 +25,9 @@ let store = new HubStore('hubstore.db');
 //TODO: remove sync call
 let hubs = JSON.parse(fs.readFileSync('hubs.json', 'utf8'));
 let hubBots: { [name: string]: nmdc.Nmdc } = {};
+let hourTable:any = [];
+let minTable: any= [];
+let tempclock = 0;
 let cronString = '*/5 * * * * *';
 for (let name in hubs) {
     store.initHub(name);
@@ -30,10 +43,23 @@ for (let name in hubs) {
     }, () => {
         store.setHubStatus(name, 1);
     });
-    bot.onClosed = () => { store.setHubStatus(name, 1); }
+    bot.onClosed = () => { store.setHubStatus(name, 3); }
     hubBots[name] = bot;
 }
 ;
+
+for (let name in hubs) {
+	let currentuptime =0;
+	let hourdetails: any= [];
+    minTable[name]=currentuptime;
+    hourTable[name] = hourdetails;
+    let i : number;
+    for (i = 0; i < 24; i++) { 
+    hourTable[name].push(null);
+}
+}
+;
+
 
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
@@ -41,8 +67,6 @@ app.set('view engine', 'jade');
 app.use(favicon('public/images/favicon_1.ico'));
 app.use(bodyParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
-
 
 // Render the index page
 app.get('/', function (req, res) {
@@ -100,9 +124,18 @@ app.get('/api/status', function (req, res) {
     getAllStatuses(hubNames, res);
 })
 
+app.get('/api/hourstat', function (req, res) {
+    let hubNames: string[] = [];
+    for (let name in hubBots) {
+        hubNames.push(name);
+    }
+    getHourStat(hubNames, res);
+})
+
+
 // // JSON Response for tracker uptime with time stamps
 // app.get('/api/uptime/tracker', function (req, res) {
-//     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
+//     store.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
 //         let jsonObj = {};
 //         for (let i = 0; i < uptimesTrackerHistory.length; i++) {
 //             let tokens = uptimesTrackerHistory[i].split(':')
@@ -114,7 +147,7 @@ app.get('/api/status', function (req, res) {
 
 // // JSON Response for tracker uptime with time stamps [array]
 // app.get('/api/2/uptime/tracker', function (req, res) {
-//     db.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
+//     store.lrange('trackeruptime', 0, -1, function (err, uptimesTrackerHistory) {
 //         let jsonArray = [];
 //         for (let i = 0; i < uptimesTrackerHistory.length; i++) {
 //             let tokens = uptimesTrackerHistory[i].split(':')
@@ -132,7 +165,14 @@ http.createServer(app).listen(app.get('port'), function () {
 });
 
 
-
+new cronJob('*/5 * * * *', function () {
+    console.log("[Stats] Cronjob started => Hourly Stats Update");
+    updateHourly();
+    /*for (let name in hubBots) {
+        console.log("Hourly Uptime of " + name + " : " + hourTable[name]);
+    }*/
+    tempclock = -1;
+}, null, true, null, null, true);
 
 // Check Site Components (Cronjob running every minute)
 new cronJob(cronString, function () {
@@ -151,20 +191,19 @@ and updating the uptime records if the current uptime > the old record.
 new cronJob(cronString, function () {
     console.log("[Stats] Cronjob started");
     updateUptime();
+    /*for (let name in hubBots) {
+        console.log("Min Uptime of " + name + " : " + minTable[name]);
+    }*/
+    tempclock = ++tempclock;
 }, null, true, null, null, true);
 
 
 async function updateStatus() {
     for (let name in hubBots) {
         let bot = hubBots[name];
-        let connName = bot.getHubName();
-
-        if (bot.getIsConnected() && (connName && connName.trim())) {
+        if (bot.getIsConnected()) {
             store.setHubStatus(name, 1);
             store.setFlag(name, 1);
-        }
-        else if (bot.getIsConnected()) {
-            store.setHubStatus(name, 3);
         }
         else {
             let hub = await store.findOne(name);
@@ -178,6 +217,7 @@ async function updateStatus() {
             let tempflag = ++reply;
             store.setFlag(name, tempflag);
         }
+        
     }
 }
 
@@ -186,7 +226,27 @@ async function updateUptime() {
         let hub = await store.findOne(name);
         if (hub.status == 1) {
             store.increaseUptime(name);
+            let tempmintable = ++minTable[name];
+            minTable[name]=tempmintable;
+            hourTable[name][23]= ((tempmintable/tempclock)*60);
         }
+    }
+}
+
+
+
+// Update Hub Uptime Record
+async function updateHourly() {
+	for (let name in hubs) {
+        let uptimeHourly = hourTable[name];
+		let currenthour=minTable[name];
+		/*if ( uptimeHourly.length <24 ) {
+			uptimeHourly.push(currenthour);
+		}*/
+		uptimeHourly.shift();
+		uptimeHourly.push(currenthour);
+		minTable[name]=0;
+    	//console.log("Hourly Uptime of " + name + " : " + hourTable[name]);
     }
 }
 
@@ -216,4 +276,12 @@ async function getAllRecords(hubNames: string[], res: express.Response) {
         records[name] = hub.record;
     }
     res.json(records);
+}
+
+async function getHourStat(hubNames: string[], res: express.Response) {
+    let hourstat = {};
+    for (let name of hubNames) {
+        hourstat[name] = hourTable[name];
+    }
+    res.json(hourstat);
 }
